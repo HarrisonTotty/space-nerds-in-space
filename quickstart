@@ -1,5 +1,16 @@
 #!/bin/sh
 
+echo
+echo
+echo Note: The quickstart script is superseded by snis_launcher.
+echo Please consider using snis_launcher to start SNIS instead of
+echo using quickstart.  I do not use quickstart much, so it is more
+echo likely to contain bugs than snis_launcher.
+echo
+echo -- steve
+echo
+echo
+
 if [ "$(id -u)" = "0" ]
 then
 	echo "You are root. Do not run this script as root." 1>&2
@@ -65,7 +76,7 @@ start_multiverse()
 		fi
 		echo "Created ./snisdb for snis_multiverse" 1>&2
 	fi
-	./bin/snis_multiverse -a -l localhost -n nickname -L narnia -e "$SNIS_SOLARSYSTEM"
+	./bin/snis_multiverse -a -l localhost -n nickname -L narnia -e "$SNIS_SOLARSYSTEM" > snis_multiverse_log.txt 2>&1
 	echo "snis_multiverse died, status was $?" 1>&2
 }
 
@@ -88,18 +99,9 @@ uppercase()
 	echo "$1" | tr '[a-z]' '[A-Z]'
 }
 
-SS1=$(get_solarsystem_name karado)
-SS2=$(get_solarsystem_name sirius)
-SS3=$(get_solarsystem_name polaris)
-SS4=$(get_solarsystem_name tau-scorpii)
+SS1=$(get_solarsystem_name default)
 
-./bin/snis_server -l localhost -L $(uppercase "$SS1") --enable-enscript -m narnia -s "$SS1" &
-if [ "$MULTIVERSE_TEST" != "" ]
-then
-	./bin/snis_server -l localhost -L $(uppercase "$SS2") --enable-enscript -m narnia -s "$SS2" &
-	./bin/snis_server -l localhost -L $(uppercase "$SS3") --enable-enscript -m narnia -s "$SS3" &
-	./bin/snis_server -l localhost -L $(uppercase "$SS4") --enable-enscript -m narnia -s "$SS4" &
-fi
+./bin/snis_server -l localhost -L $(uppercase "$SS1") --enable-enscript -m narnia -s "$SS1" > snis_server_log."$SS1".txt 2>&1 &
 
 sleep 2.50
 
@@ -124,6 +126,6 @@ fi
 # ./bin/snis_client $ASPECT_RATIO --fullscreen --solarsystem "$SNIS_SOLARSYSTEM" --quickstart --starship "$shipname" --pw "$password" $@
 ./bin/snis_client $ASPECT_RATIO_ARG --fullscreen --starship "$shipname" --pw "$password" \
 	-j '/dev/input/by-id/usb-Thrustmaster_T.16000M-joystick' \
-	-j '/dev/input/by-id/usb-Thrustmaster_TWCS_Throttle-joystick' $@
+	-j '/dev/input/by-id/usb-Thrustmaster_TWCS_Throttle-joystick' $@ > snis_client_log.txt 2>&1
 exit $?
 
