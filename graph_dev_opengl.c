@@ -639,6 +639,7 @@ struct graph_dev_gl_atmosphere_shader {
 	GLint shadow_annulus_radius_id;
 	GLint shadow_annulus_tint_color_id;
 	GLint ring_texture_v_id;
+	GLint atmosphere_brightness_id;
 };
 
 struct graph_dev_gl_filled_wireframe_shader {
@@ -1295,6 +1296,7 @@ struct raster_texture_params {
 	float emit_intensity;
 	float invert;
 	float in_shade;
+	float atmosphere_brightness;
 	union vec3 *water_color;
 	union vec3 *sun_color;
 };
@@ -1561,7 +1563,7 @@ static void graph_dev_raster_single_color_lit(const struct mat44 *mat_mvp, const
 static void graph_dev_raster_atmosphere(const struct mat44 *mat_mvp, const struct mat44 *mat_mv,
 	const struct mat33 *mat_normal,
 	struct mesh *m, struct sng_color *triangle_color, union vec3 *eye_light_pos, GLfloat alpha,
-	struct shadow_annulus_data *shadow_annulus, float ring_texture_v)
+	struct shadow_annulus_data *shadow_annulus, float ring_texture_v, float atmosphere_brightness)
 {
 	enable_3d_viewport();
 	struct graph_dev_gl_atmosphere_shader *shader;
@@ -1615,6 +1617,7 @@ static void graph_dev_raster_atmosphere(const struct mat44 *mat_mvp, const struc
 		glUseProgram(shader->program_id);
 	}
 
+	glUniform1f(shader->atmosphere_brightness_id, atmosphere_brightness);
 	glUniformMatrix4fv(shader->mv_matrix_id, 1, GL_FALSE, &mat_mv->m[0][0]);
 	glUniformMatrix4fv(shader->mvp_matrix_id, 1, GL_FALSE, &mat_mvp->m[0][0]);
 	glUniformMatrix3fv(shader->normal_matrix_id, 1, GL_FALSE, &mat_normal->m[0][0]);
@@ -2366,6 +2369,10 @@ static void graph_dev_raster_triangle_mesh(struct entity_context *cx, struct ent
 		case MATERIAL_ATMOSPHERE: {
 			rtp.do_blend = 1;
 			rtp.alpha = entity_get_alpha(e);
+			if (e->material_ptr->atmosphere.brightness)
+				rtp.atmosphere_brightness = *e->material_ptr->atmosphere.brightness;
+			else
+				rtp.atmosphere_brightness = 0.5;
 			atmosphere = 1;
 			atmosphere_color.red = e->material_ptr->atmosphere.r;
 			atmosphere_color.green = e->material_ptr->atmosphere.g;
@@ -2561,7 +2568,7 @@ static void graph_dev_raster_triangle_mesh(struct entity_context *cx, struct ent
 				if (atmosphere)
 					graph_dev_raster_atmosphere(rtp.mat_mvp, rtp.mat_mv, rtp.mat_normal,
 						e->m, &atmosphere_color, eye_light_pos, rtp.alpha,
-						&shadow_annulus, rtp.ring_texture_v);
+						&shadow_annulus, rtp.ring_texture_v, rtp.atmosphere_brightness);
 				else
 					graph_dev_raster_single_color_lit(rtp.mat_mvp, rtp.mat_mv,
 						rtp.mat_normal, e->m, &triangle_color, eye_light_pos,
@@ -3045,6 +3052,7 @@ static void setup_atmosphere_shader(struct graph_dev_gl_atmosphere_shader *shade
 	shader->mv_matrix_id = glGetUniformLocation(shader->program_id, "u_MVMatrix");
 	shader->normal_matrix_id = glGetUniformLocation(shader->program_id, "u_NormalMatrix");
 	shader->light_pos_id = glGetUniformLocation(shader->program_id, "u_LightPos");
+	shader->atmosphere_brightness_id = glGetUniformLocation(shader->program_id, "u_atmosphere_brightness");
 
 	/* Get a handle for our buffers */
 	shader->vertex_position_id = glGetAttribLocation(shader->program_id, "a_Position");

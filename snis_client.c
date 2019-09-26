@@ -263,6 +263,7 @@ static uint32_t my_home_planet_oid = UNKNOWN_ID;
 
 static int real_screen_width;
 static int real_screen_height;
+static int suppress_hyperspace_noise = 0;	/* tweakable */
 static int warp_limbo_countdown = 0;
 static int warp_field_error = 0;
 static int damage_limbo_countdown = 0;
@@ -275,8 +276,8 @@ static struct entity_context *sciballecx;
 static struct entity_context *network_setup_ecx;
 static int science_cam_timer = 0;
 
-static int suppress_rocket_noise = 0;
-static float rocket_noise_volume = 1.0;
+static int suppress_rocket_noise = 0;		/* tweakable */
+static float rocket_noise_volume = 1.0;		/* tweakable */
 static int ecx_fake_stars_initialized = 0;
 static int nfake_stars = 0;
 static volatile int fake_stars_timer = 0;
@@ -290,6 +291,7 @@ static volatile int displaymode = DISPLAYMODE_LOBBYSCREEN;
 static volatile int helpmode = 0;
 static volatile float weapons_camera_shake = 0.0f; 
 static volatile float main_camera_shake = 0.0f;
+static float impulse_camera_shake = 1.0; /* tweakable */
 static unsigned char camera_mode;
 static unsigned char nav_camera_mode;
 static unsigned char nav_has_computer_button = 0; /* tweakable */
@@ -487,6 +489,7 @@ static struct material spacemonster_tentacle_material;
 static struct material spacemonster_material;
 static struct material warpgate_material;
 static struct material docking_port_material;
+static float atmosphere_brightness = 0.5; /* tweakable */
 #define NPLANET_MATERIALS 256
 static int planetary_ring_texture_id = -1;
 static struct material planetary_ring_material[NPLANETARY_RING_MATERIALS];
@@ -1024,6 +1027,7 @@ static struct navigation_ui {
 	struct button *computer_button;
 	struct button *starmap_button;
 	struct button *lights_button;
+	struct button *camera_pos_button;
 	struct button *custom_button;
 	int gauge_radius;
 	struct snis_text_input_box *computer_input;
@@ -1998,8 +2002,7 @@ static int update_turret(uint32_t id, uint32_t timestamp, double x, double y, do
 	return 0;
 }
 
-static int update_asteroid(uint32_t id, uint32_t timestamp, double x, double y, double z,
-	uint8_t carbon, uint8_t nickeliron, uint8_t silicates, uint8_t preciousmetals)
+static int update_asteroid(uint32_t id, uint32_t timestamp, double x, double y, double z)
 {
 	int i, k, m, s;
 	struct entity *e;
@@ -2035,9 +2038,21 @@ static int update_asteroid(uint32_t id, uint32_t timestamp, double x, double y, 
 		quat_init_axis_v(&rotational_velocity, &axis, angle);
 		o->tsd.asteroid.rotational_velocity = rotational_velocity;
 	} else {
-		o = &go[i];
 		update_generic_object(i, timestamp, x, y, z, 0, 0, 0, NULL, 1);
 	}
+	return 0;
+}
+
+static int update_asteroid_minerals(uint32_t id, uint8_t carbon, uint8_t nickeliron,
+					uint8_t silicates, uint8_t preciousmetals)
+{
+	int i;
+	struct snis_entity *o;
+
+	i = lookup_object_by_id(id);
+	if (i < 0)
+		return 0;
+	o = &go[i];
 	o->tsd.asteroid.carbon = carbon;
 	o->tsd.asteroid.nickeliron = nickeliron;
 	o->tsd.asteroid.silicates = silicates;
@@ -2235,6 +2250,7 @@ static int update_planet(uint32_t id, uint32_t timestamp, double x, double y, do
 				go[i].tsd.planet.atm_material.atmosphere.g = (float) atm_g / 255.0f;
 				go[i].tsd.planet.atm_material.atmosphere.b = (float) atm_b / 255.0f;
 				go[i].tsd.planet.atm_material.atmosphere.scale = (float) atm_scale;
+				go[i].tsd.planet.atm_material.atmosphere.brightness = &atmosphere_brightness;
 				if (hasring)
 					go[i].tsd.planet.atm_material.atmosphere.ring_material =
 						planet_material[m].textured_planet.ring_material;
@@ -3168,6 +3184,7 @@ static void add_shield_effect(struct snis_entity *o,
 		spark[i].tsd.spark.atm_material.atmosphere.g = 1.0;
 		spark[i].tsd.spark.atm_material.atmosphere.b = 1.0;
 		spark[i].tsd.spark.atm_material.atmosphere.scale = 1.05;
+		spark[i].tsd.spark.atm_material.atmosphere.brightness = &atmosphere_brightness;
 		update_entity_material(atm, &spark[i].tsd.spark.atm_material);
 		entity_update_alpha(atm, 0.5);
 		update_entity_scale(atm, 1.05);
@@ -5226,7 +5243,9 @@ static int process_warp_limbo_packet(void)
 	rc = read_and_unpack_buffer(buffer, "h", &value);
 	if (rc != 0)
 		return rc;
-	if (value >= 0 && value <= 40 * frame_rate_hz)
+	if (suppress_hyperspace_noise)
+		warp_limbo_countdown = 0;
+	else if (value >= 0 && value <= 40 * frame_rate_hz)
 		warp_limbo_countdown = value;
 	return 0;
 } 
@@ -6835,22 +6854,37 @@ static int process_update_asteroid_packet(void)
 	uint32_t id, timestamp;
 	double dx, dy, dz;
 	int rc;
-	uint8_t carbon, nickeliron, silicates, preciousmetals;
 
 	assert(sizeof(buffer) > sizeof(struct update_asteroid_packet) - sizeof(uint8_t));
-	rc = read_and_unpack_buffer(buffer, "wwSSSbbbb", &id, &timestamp,
+	rc = read_and_unpack_buffer(buffer, "wwSSS", &id, &timestamp,
 			&dx, (int32_t) UNIVERSE_DIM,
 			&dy,(int32_t) UNIVERSE_DIM,
-			&dz, (int32_t) UNIVERSE_DIM,
+			&dz, (int32_t) UNIVERSE_DIM);
+	if (rc != 0)
+		return rc;
+	pthread_mutex_lock(&universe_mutex);
+	rc = update_asteroid(id, timestamp, dx, dy, dz);
+	pthread_mutex_unlock(&universe_mutex);
+	return (rc < 0);
+}
+
+static int process_update_asteroid_minerals_packet(void)
+{
+	unsigned char buffer[100];
+	uint32_t id;
+	int rc;
+	uint8_t carbon, nickeliron, silicates, preciousmetals;
+
+	assert(sizeof(buffer) > sizeof(struct update_asteroid_minerals_packet) - sizeof(uint8_t));
+	rc = read_and_unpack_buffer(buffer, "wbbbb", &id,
 			&carbon, &nickeliron, &silicates, &preciousmetals);
 	if (rc != 0)
 		return rc;
 	pthread_mutex_lock(&universe_mutex);
-	rc = update_asteroid(id, timestamp, dx, dy, dz,
-				carbon, nickeliron, silicates, preciousmetals);
+	rc = update_asteroid_minerals(id, carbon, nickeliron, silicates, preciousmetals);
 	pthread_mutex_unlock(&universe_mutex);
 	return (rc < 0);
-} 
+}
 
 static int process_update_warp_core_packet(void)
 {
@@ -7454,6 +7488,9 @@ static void *gameserver_reader(__attribute__((unused)) void *arg)
 			break;
 		case OPCODE_UPDATE_ASTEROID:
 			rc = process_update_asteroid_packet();
+			break;
+		case OPCODE_UPDATE_ASTEROID_MINERALS:
+			rc = process_update_asteroid_minerals_packet();
 			break;
 		case OPCODE_UPDATE_WARP_CORE:
 			rc = process_update_warp_core_packet();
@@ -9070,6 +9107,8 @@ static void update_external_camera_position_and_orientation(struct snis_entity *
 	*cam_pos = external_camera_position;
 }
 
+static double sample_power_data_impulse_current(void);
+
 static void show_mainscreen(GtkWidget *w)
 {
 	const float min_angle_of_view = 5.0 * M_PI / 180.0;
@@ -9083,6 +9122,7 @@ static void show_mainscreen(GtkWidget *w)
 	union vec3 cam_pos;
 	struct snis_entity *vp;
 	struct entity *player_ship = 0;
+	double impulse_power;
 
 	if (!(o = find_my_ship()))
 		return;
@@ -9154,6 +9194,14 @@ static void show_mainscreen(GtkWidget *w)
 			cam_offset = desired_cam_offset;
 		else
 			vec3_lerp(&cam_offset, &cam_offset, &desired_cam_offset, 0.15 / (use_60_fps + 1));
+
+		/* If impulse power is really cooking, add in some screen shake */
+		impulse_power = sample_power_data_impulse_current();
+		if (impulse_power > 220.0) {
+			float new_camera_shake = impulse_camera_shake * 0.25 * (impulse_power - 220.0) / 35.0;
+			if (new_camera_shake > main_camera_shake)
+				main_camera_shake = new_camera_shake;
+		}
 
 		if (main_camera_shake > 0.05 && vp == o) {
 			float ryaw, rpitch;
@@ -11582,6 +11630,11 @@ static void nav_computer_button_pressed(__attribute__((unused)) void *s)
 	ui_unhide_widget(nav_ui.computer_input);
 }
 
+static void nav_camera_pos_button_pressed(__attribute__((unused)) void *s)
+{
+	do_nav_camera_mode();
+}
+
 int nav_ui_docking_magnets_active(__attribute__((unused)) void *notused)
 {
 	struct snis_entity *o;
@@ -11697,6 +11750,9 @@ static void init_nav_ui(void)
 					UI_COLOR(nav_warning), TINY_FONT, nav_ui.input, 80, &timer, NULL, NULL);
 	snis_text_input_box_set_return(nav_ui.computer_input, nav_computer_data_entered);
 	snis_text_input_box_set_dynamic_width(nav_ui.computer_input, txx(100), txx(550));
+	nav_ui.camera_pos_button = snis_button_init(txx(4), txy(210), -1, -1, "CAM POS", button_color,
+			NANO_FONT, nav_camera_pos_button_pressed, NULL);
+	snis_button_set_sound(nav_ui.camera_pos_button, UISND10);
 	ui_add_slider(nav_ui.warp_slider, DISPLAYMODE_NAVIGATION, "WARP DRIVER POWER CONTROL");
 	ui_add_slider(nav_ui.navzoom_slider, DISPLAYMODE_NAVIGATION, "NAVIGATION ZOOM CONTROL");
 	ui_add_slider(nav_ui.throttle_slider, DISPLAYMODE_NAVIGATION, "IMPULSE DRIVE THROTTLE CONTROL");
@@ -11719,6 +11775,8 @@ static void init_nav_ui(void)
 	ui_add_gauge(nav_ui.speedometer, DISPLAYMODE_NAVIGATION);
 	ui_add_button(nav_ui.computer_button, DISPLAYMODE_NAVIGATION,
 				"ACTIVATE THE COMPUTER");
+	ui_add_button(nav_ui.camera_pos_button, DISPLAYMODE_NAVIGATION,
+				"CHANGE CAMERA POSITION (SHORTCUT BACKQUOTE KEY)");
 	ui_add_text_input_box(nav_ui.computer_input, DISPLAYMODE_NAVIGATION);
 	ui_hide_widget(nav_ui.computer_input);
 	instrumentecx = entity_context_new(5000, 1000);
@@ -13816,8 +13874,6 @@ static void draw_tooltip(int mousex, int mousey, char *tooltip)
 	sng_string_bounding_box(tooltip, NANO_FONT, &bbx1, &bby1, &bbx2, &bby2);
 	width = fabsf(bbx2 - bbx1) + 20;
 	height = fabsf(bby2 - bby1) + 20;
-
-	fprintf(stderr, "x = %d, y = %d, width = %f, height = %f\n", x, y, width, height);
 
 	if (x + width > SCREEN_WIDTH)
 		x = SCREEN_WIDTH - width;
@@ -17053,6 +17109,12 @@ static struct tweakable_var_descriptor client_tweak[] = {
 		&yjoystick_threshold, 'i', 0.0, 0.0, 0.0, 0, 64000, 23000 },
 	{ "CURRENT_TYPEFACE", "0 TO 1 - SETS CURRENT TYPEFACE",
 		&current_typeface, 'i', 0.0, 0.0, 0.0, 0, 1, 0 },
+	{ "IMPULSE_CAMERA_SHAKE", "0.0 TO 2.0 - AMOUNT OF CAMERA SHAKE AT HIGH IMPULSE POWER",
+		&impulse_camera_shake, 'f', 0.0, 2.0, 1.0, 0, 0, 0 },
+	{ "ATMOSPHERE_BRIGHTNESS", "0.0 TO 1.0, DEFAULT 0.5 - BRIGHTNESS OF ATMOSPHERES",
+		&atmosphere_brightness, 'f', 0.0, 1.0, 0.5, 0, 0, 0 },
+	{ "SUPPRESS_HYPERSPACE_NOISE", "0 OR 1 - SUPPRESS THE NOISE ON TERMINALS DURING HYPERSPACE",
+		&suppress_hyperspace_noise, 'i', 0.0, 0.0, 0.0, 0, 1, 0 },
 	{ NULL, NULL, NULL, '\0', 0.0, 0.0, 0.0, 0, 0, 0 },
 };
 

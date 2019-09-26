@@ -174,6 +174,10 @@ static int player_invincibility = 0;
 static int game_paused = 0;
 #define DEFAULT_LUA_INSTRUCTION_COUNT_LIMIT 100000
 static int lua_instruction_count_limit = DEFAULT_LUA_INSTRUCTION_COUNT_LIMIT;
+static float bandwidth_throttle_distance = (XKNOWN_DIM / 3); /* How far before object */
+						/* updates may be throttled. tweakable */
+static int distant_update_period = 20; /* Distant objects are updated only after */
+				       /* this many ticks. tweakable */
 
 /*
  * End of runtime adjustable globals
@@ -4633,7 +4637,14 @@ static void update_ship_orientation(struct snis_entity *o)
 	union vec3 up = { { 0.0f, 1.0f, 0.0f } };
 	union vec3 current = { { o->vx, o->vy, o->vz } };
 
-	if (fabs(o->vx) < 0.001 && fabs(o->vy) < 0.001 && fabs(o->vz) < 0.001)
+	/* The value 0.05 is a bit finicky here.  Smaller values (e.g. 0.01) causes
+	 * ships to "wiggle" when moving very slowly near their destinations.
+	 * Higher values (0.1) causes ships to be unable to hit their destinations,
+	 * and instead wander around them. 0.05 was determined empirically to be
+	 * reduce wiggling and let ships hit their destinations reasonably well.
+	 * Kind of gross though.
+	 */
+	if (fabs(o->vx) < 0.05 && fabs(o->vy) < 0.05 && fabs(o->vz) < 0.05)
 		return;
 
 	quat_from_u2v(&o->orientation, &right, &current, &up);
@@ -15486,7 +15497,11 @@ static void warp_gate_ticket_buying_npc_bot(struct snis_entity *o, int bridge,
 	sb = &go[i];
 
 	if (server_tracker_get_server_list(server_tracker, &gameserver, &nservers) != 0
-		|| nservers <= 0) {
+		|| nservers <= 1) {
+		/*
+		 * nservers <= 1 rather than <= 0 because if there's only 1 server,
+		 * then we must already be in it, and there's no place else for us to go.
+		 */
 		send_comms_packet(sb, name, ch, "NO WARP-GATE TICKETS AVAILABLE\n");
 		return;
 	}
@@ -15537,6 +15552,8 @@ static void warp_gate_ticket_buying_npc_bot(struct snis_entity *o, int bridge,
 			}
 		}
 	}
+	if (nsslist == 0)
+		send_comms_packet(sb, name, ch, "NO WARP-GATE TICKETS AVAILABLE\n");
 	send_comms_packet(sb, name, ch, "------------------\n");
 	send_comms_packet(sb, name, ch, "  0: PREVIOUS MENU\n");
 	rc = sscanf(msg, "%d", &selection);
@@ -17020,6 +17037,11 @@ static struct tweakable_var_descriptor server_tweak[] = {
 		&game_paused, 'i', 0.0, 0.0, 0.0, 0, 1, 0 },
 	{ "LUA_INSTRUCTION_LIMIT", "USED TO DETECT RUNAWAY LUA SCRIPTS",
 		&lua_instruction_count_limit, 'i', 0.0, 0.0, 0.0, 0, 1000000, DEFAULT_LUA_INSTRUCTION_COUNT_LIMIT },
+	{ "BANDWIDTH_THROTTLE_DISTANCE", "DISTANCE AT WHICH UPDATES MAY BE DROPPED TO CONTROL BANDWIDTH",
+		&bandwidth_throttle_distance, 'f',
+			(float) XKNOWN_DIM / 4.0f, (float) XKNOWN_DIM, (float) XKNOWN_DIM / 3.0f, 0, 0, 0 },
+	{ "DISTANT_UPDATE_PERIOD", "HOW MANY TICKS BEFORE UPDATING DISTANT OBJECTS",
+		&distant_update_period, 'i', 0.0, 0.0, 0.0, 1, 40, 20},
 	{ NULL, NULL, NULL, '\0', 0.0, 0.0, 0.0, 0, 0, 0 },
 };
 
@@ -21447,6 +21469,8 @@ static void send_econ_update_ship_packet(struct game_client *c,
 	struct snis_entity *o);
 static void send_update_asteroid_packet(struct game_client *c,
 	struct snis_entity *o);
+static void send_update_asteroid_minerals_packet(struct game_client *c,
+	struct snis_entity *o);
 static void send_update_docking_port_packet(struct game_client *c,
 	struct snis_entity *o);
 static void send_update_block_packet(struct game_client *c,
@@ -21519,6 +21543,9 @@ static void queue_up_client_object_update(struct game_client *c, struct snis_ent
 		break;
 	case OBJTYPE_ASTEROID:
 		send_update_asteroid_packet(c, o);
+		/* The asteroid minerals rarely change, so send them only once every 64 ticks, or every 6.4 seconds */
+		if (((o->id + universe_timestamp) & 0x3f) == 0)
+			send_update_asteroid_minerals_packet(c, o);
 		break;
 	case OBJTYPE_CARGO_CONTAINER:
 		send_update_cargo_container_packet(c, o);
@@ -21615,12 +21642,11 @@ static int too_far_away_to_care(struct game_client *c, struct snis_entity *o)
 {
 	struct snis_entity *ship = &go[c->ship_index];
 	double dx, dz, dist;
-	const double threshold = (XKNOWN_DIM / 2) * (XKNOWN_DIM / 2);
 
 	dx = (ship->x - o->x);
 	dz = (ship->z - o->z);
 	dist = (dx * dx) + (dz * dz);
-	return (dist > threshold);
+	return (dist > (bandwidth_throttle_distance * bandwidth_throttle_distance));
 }
 
 static void queue_latency_check(struct game_client *c)
@@ -21801,8 +21827,6 @@ static void queue_up_client_custom_buttons(struct game_client *c)
 				b->custom_button_text[i][14]));
 }
 
-#define GO_TOO_FAR_UPDATE_PER_NTICKS 7
-
 static void queue_up_client_updates(struct game_client *c)
 {
 	int i;
@@ -21820,7 +21844,7 @@ static void queue_up_client_updates(struct game_client *c)
 				continue;
 
 			if (too_far_away_to_care(c, &go[i]) &&
-				(universe_timestamp + i) % GO_TOO_FAR_UPDATE_PER_NTICKS != 0) {
+				(universe_timestamp + i) % distant_update_period != 0) {
 
 				gather_opcode_not_sent_stats(&go[i]);
 				continue;
@@ -22394,10 +22418,16 @@ static void send_update_damcon_part_packet(struct game_client *c,
 static void send_update_asteroid_packet(struct game_client *c,
 	struct snis_entity *o)
 {
-	pb_queue_to_client(c, snis_opcode_pkt("bwwSSSbbbb", OPCODE_UPDATE_ASTEROID, o->id, o->timestamp,
+	pb_queue_to_client(c, snis_opcode_pkt("bwwSSS", OPCODE_UPDATE_ASTEROID, o->id, o->timestamp,
 					o->x, (int32_t) UNIVERSE_DIM,
 					o->y, (int32_t) UNIVERSE_DIM,
-					o->z, (int32_t) UNIVERSE_DIM,
+					o->z, (int32_t) UNIVERSE_DIM));
+}
+
+static void send_update_asteroid_minerals_packet(struct game_client *c,
+	struct snis_entity *o)
+{
+	pb_queue_to_client(c, snis_opcode_pkt("bwbbbb", OPCODE_UPDATE_ASTEROID_MINERALS, o->id,
 					o->tsd.asteroid.carbon,
 					o->tsd.asteroid.nickeliron,
 					o->tsd.asteroid.silicates,
