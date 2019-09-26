@@ -480,7 +480,7 @@ struct ship_data {
 	uint16_t torpedo_load_time;	/* ticks remaining before torpedo finishes loading */
 	uint8_t phaser_bank_charge;	/* current level of phaser bank charge, 0 - 255 */
 /* These values are for the player ship, RTS units are different see rts_unit_data.h */
-#define FUEL_DURATION (10.0) /* minutes */
+#define FUEL_DURATION (20.0) /* minutes */
 #define FUEL_UNITS (FUEL_DURATION * 60.0 * 30.0)
 #define FUEL_CONSUMPTION_UNIT ((uint32_t) (UINT_MAX / FUEL_UNITS))
 	uint32_t fuel;			/* amount of fuel on the ship.  UINT_MAX == full fuel */
