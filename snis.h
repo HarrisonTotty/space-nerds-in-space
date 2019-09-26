@@ -615,7 +615,7 @@ struct marketplace_data {
 
 #define STARBASE_FIRE_CHANCE 25 /* ... out of 1000, 10x per sec */
 #define STARBASE_SCALE_FACTOR (2.0)
-#define STARBASE_DOCK_TIME (1200) /* 2 minutes */
+#define STARBASE_DOCK_TIME (3000) /* 5 minutes */
 struct starbase_data {
 	uint8_t under_attack;
 	uint8_t lifeform_count;
