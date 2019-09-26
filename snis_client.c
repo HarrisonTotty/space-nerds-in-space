@@ -212,8 +212,8 @@ static int joystick_fd[MAX_JOYSTICKS] = { -1 };
 static int njoysticks = 0;
 static struct joystick_descriptor *joysticks_found;
 static struct joystick_config *joystick_cfg = NULL;
-static int xjoystick_threshold = 23000; /* tweakable (Maybe this should be done via joystick_config.c instead) */
-static int yjoystick_threshold = 23000; /* tweakable (Maybe this should be done via joystick_config.c instead) */
+static int xjoystick_threshold = 0; /* tweakable (Maybe this should be done via joystick_config.c instead) */
+static int yjoystick_threshold = 0; /* tweakable (Maybe this should be done via joystick_config.c instead) */
 
 static int physical_io_socket = -1;
 static pthread_t physical_io_thread;
@@ -17104,9 +17104,9 @@ static struct tweakable_var_descriptor client_tweak[] = {
 	{ "ATMOSPHERE_RING_SHADOWS", "0 OR 1 TO DISABLE OR ENABLE ATMOSPHERIC RING SHADOWS",
 		&graph_dev_atmosphere_ring_shadows, 'i', 0.0, 0.0, 0.0, 0, 1, 1 },
 	{ "XJOYSTICK_THRESHOLD", "0 TO 64000 - SETS BOUNDARY BETWEEN FINE AND COARSE",
-		&xjoystick_threshold, 'i', 0.0, 0.0, 0.0, 0, 64000, 23000 },
+		&xjoystick_threshold, 'i', 0.0, 0.0, 0.0, 0, 64000, 0 },
 	{ "YJOYSTICK_THRESHOLD", "0 TO 64000 - SETS BOUNDARY BETWEEN FINE AND COARSE",
-		&yjoystick_threshold, 'i', 0.0, 0.0, 0.0, 0, 64000, 23000 },
+		&yjoystick_threshold, 'i', 0.0, 0.0, 0.0, 0, 64000, 0 },
 	{ "CURRENT_TYPEFACE", "0 TO 1 - SETS CURRENT TYPEFACE",
 		&current_typeface, 'i', 0.0, 0.0, 0.0, 0, 1, 0 },
 	{ "IMPULSE_CAMERA_SHAKE", "0.0 TO 2.0 - AMOUNT OF CAMERA SHAKE AT HIGH IMPULSE POWER",
