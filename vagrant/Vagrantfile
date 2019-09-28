@@ -24,9 +24,9 @@ Vagrant.configure("2") do |config|
   # boxes at https://vagrantcloud.com/search.
   config.vm.box = "generic/ubuntu1704"
 
-  config.ssh.username = 'root'
-config.ssh.password = 'vagrant'
-config.ssh.insert_key = 'true'
+# config.ssh.username = 'root'
+# config.ssh.password = 'vagrant'
+# config.ssh.insert_key = 'true'
 
   # Disable automatic box update checking. If you disable this, then
   # boxes will only be checked for updates when the user runs
@@ -63,13 +63,13 @@ config.ssh.insert_key = 'true'
   # backing providers for Vagrant. These expose provider-specific options.
   # Example for VirtualBox:
   #
-  # config.vm.provider "virtualbox" do |vb|
+#  config.vm.provider "virtualbox" do |vb|
   #   # Display the VirtualBox GUI when booting the machine
-     vb.gui = true
+#     vb.gui = true
   #
   #   # Customize the amount of memory on the VM:
   #   vb.memory = "1024"
-  # end
+#  end
   #
   # View the documentation for the provider you are using for more
   # information on available options.
@@ -81,7 +81,7 @@ config.vm.provision "shell", inline: <<-SHELL
 apt-get update
 
 # Install dependencies
-apt-get install build-essential;
+apt-get install build-essentials;
 apt-get install portaudio19-dev;
 apt-get install libvorbis-dev;
 apt-get install libgtk2.0-dev;
@@ -91,6 +91,7 @@ apt-get install libglew1.5-dev;
 apt-get install libssl-dev;
 apt-get install libttspico-utils; # for text to speech
 apt-get install sox; # for "play" command, used by text to speech
+apt-get install lua5.3;
 
 # Install game
 apt-get install git make;
@@ -98,7 +99,7 @@ apt-get install git make;
 mkdir /space-nerds;
 cd /space-nerds;
 git clone https://github.com/HarrisonTotty/space-nerds-in-space.git;
-cd space-nerds-in-space-master;
+cd /space-nerds/space-nerds-in-space-master;
 make;
 make update-assets;
 echo "cd /space-nerds/space-nerds-in-space-master/;./snis_launcher";
