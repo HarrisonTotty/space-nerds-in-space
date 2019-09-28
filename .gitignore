@@ -36,3 +36,4 @@ test-mtwist
 test-quat
 test_solarsystem_config
 test-space-partition
+.vagrant
