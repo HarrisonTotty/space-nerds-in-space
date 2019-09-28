@@ -81,28 +81,17 @@ config.vm.provision "shell", inline: <<-SHELL
 apt-get update
 
 # Install dependencies
-apt-get install build-essentials;
-apt-get install portaudio19-dev;
-apt-get install libvorbis-dev;
-apt-get install libgtk2.0-dev;
-apt-get install libgtkglext1-dev;
-apt-get install liblua5.2-dev;
-apt-get install libglew1.5-dev;
-apt-get install libssl-dev;
-apt-get install libttspico-utils; # for text to speech
-apt-get install sox; # for "play" command, used by text to speech
-apt-get install lua5.3;
+apt-get install build-essentials portaudio19-dev libvorbis-dev libgtk2.0-dev libgtkglext1-dev liblua5.2-dev libglew1.5-dev lua5.3 apt-get install libssl-dev git
+# apt-get install libttspico-utils; # for text to speech
+# apt-get install sox; # for "play" command, used by text to speech
 
 # Install game
-apt-get install git make;
-# git clone https://github.com/smcameron/space-nerds-in-space.git
-mkdir /space-nerds;
-cd /space-nerds;
-git clone https://github.com/HarrisonTotty/space-nerds-in-space.git;
-cd /space-nerds/space-nerds-in-space-master;
-make;
-make update-assets;
-echo "cd /space-nerds/space-nerds-in-space-master/;./snis_launcher";
+# apt-get install git make;
+# git clone https://github.com/smcameron/space-nerds-in-space.git /space-nerds;
+git clone https://github.com/HarrisonTotty/space-nerds-in-space.git /space-nerds;
+cd /space-nerds; make;
+cd /space-nerds; make update-assets;
+echo "cd /space-nerds/;./snis_launcher";
 SHELL
 
 end
