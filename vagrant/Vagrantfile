@@ -24,6 +24,10 @@ Vagrant.configure("2") do |config|
   # boxes at https://vagrantcloud.com/search.
   config.vm.box = "generic/ubuntu1704"
 
+  config.ssh.username = 'root'
+config.ssh.password = 'vagrant'
+config.ssh.insert_key = 'true'
+
   # Disable automatic box update checking. If you disable this, then
   # boxes will only be checked for updates when the user runs
   # `vagrant box outdated`. This is not recommended.
@@ -61,7 +65,7 @@ Vagrant.configure("2") do |config|
   #
   # config.vm.provider "virtualbox" do |vb|
   #   # Display the VirtualBox GUI when booting the machine
-  #   vb.gui = true
+     vb.gui = true
   #
   #   # Customize the amount of memory on the VM:
   #   vb.memory = "1024"
@@ -83,24 +87,21 @@ apt-get install libvorbis-dev;
 apt-get install libgtk2.0-dev;
 apt-get install libgtkglext1-dev;
 apt-get install liblua5.2-dev;
-apt-get install libglew1.5-s 
-
-
-dev;
+apt-get install libglew1.5-dev;
 apt-get install libssl-dev;
 apt-get install libttspico-utils; # for text to speech
 apt-get install sox; # for "play" command, used by text to speech
 
 # Install game
-apt-get install git;
+apt-get install git make;
 # git clone https://github.com/smcameron/space-nerds-in-space.git
-mkdir /space-nerds
-cd /space-nerds
-git clone https://github.com/HarrisonTotty/space-nerds-in-space.git
-cd space-nerds-in-space-master
-make
-make update-assets
-echo "cd /space-nerds/space-nerds-in-space-master/;./snis_launcher"
+mkdir /space-nerds;
+cd /space-nerds;
+git clone https://github.com/HarrisonTotty/space-nerds-in-space.git;
+cd space-nerds-in-space-master;
+make;
+make update-assets;
+echo "cd /space-nerds/space-nerds-in-space-master/;./snis_launcher";
 SHELL
 
 end
