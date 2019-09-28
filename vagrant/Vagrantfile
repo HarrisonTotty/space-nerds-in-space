@@ -1,6 +1,16 @@
 # -*- mode: ruby -*-
 # vi: set ft=ruby :
 
+# TO USE THIS FILE on Windows:
+# 1. Install Oracle VirtualBox (free software)
+# 2. Install Hashicorp Vagrant (free software)
+# 3. cd to the directory where this file is
+# 4. run "vagrant up"
+5. Launch Oracle VirtualBox (in graphical mode) and connect to the VM that Vagrant created.
+6. Login as root
+7. Launch a shell
+8. Run "cd /space-nerds/space-nerds-in-space-master/;./snis_launcher"
+
 # All Vagrant configuration is done below. The "2" in Vagrant.configure
 # configures the configuration version (we support older styles for
 # backwards compatibility). Please don't change it unless you know what
