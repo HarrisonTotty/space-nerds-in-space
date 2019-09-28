@@ -6,10 +6,10 @@
 # 2. Install Hashicorp Vagrant (free software)
 # 3. cd to the directory where this file is
 # 4. run "vagrant up"
-5. Launch Oracle VirtualBox (in graphical mode) and connect to the VM that Vagrant created.
-6. Login as root
-7. Launch a shell
-8. Run "cd /space-nerds/space-nerds-in-space-master/;./snis_launcher"
+# 5. Launch Oracle VirtualBox (in graphical mode) and connect to the VM that Vagrant created.
+# 6. Login as root
+# 7. Launch a shell
+# 8. Run "cd /space-nerds/space-nerds-in-space-master/;./snis_launcher"
 
 # All Vagrant configuration is done below. The "2" in Vagrant.configure
 # configures the configuration version (we support older styles for
@@ -83,7 +83,10 @@ apt-get install libvorbis-dev;
 apt-get install libgtk2.0-dev;
 apt-get install libgtkglext1-dev;
 apt-get install liblua5.2-dev;
-apt-get install libglew1.5-dev;
+apt-get install libglew1.5-s 
+
+
+dev;
 apt-get install libssl-dev;
 apt-get install libttspico-utils; # for text to speech
 apt-get install sox; # for "play" command, used by text to speech
