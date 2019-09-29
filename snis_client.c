@@ -15638,8 +15638,8 @@ static void draw_science_data(GtkWidget *w, struct snis_entity *ship, struct sni
 	static double lastz = 0.0;
 	static double lastvel = 0.0;
 	static double closing_rate = 0.0;
-        static int closing_time_mins = 0;
-        static int closing_time_secs = 0;
+        static int eta_mins = 0;
+        static int eta_secs = 0;
 	static double last_range = 1.0;
 
 	yinc = 22 * SCREEN_HEIGHT / 600;
@@ -15825,14 +15825,15 @@ static void draw_science_data(GtkWidget *w, struct snis_entity *ship, struct sni
 	sng_abs_xy_draw_string(buffer, TINY_FONT, x, y);
 	if (o || waypoint_index != (uint32_t) -1) {
           if (closing_rate != 0) {
-            closing_time_mins = (int)(round(range) / round(closing_rate)) / 60;
-            closing_time_secs = (int)(round(range) / round(closing_rate)) % 60;
-	    snprintf(buffer, sizeof(buffer), "(%i M %i S)", closing_time_mins, closing_time_secs);
+            eta_mins = (int)(round(range) / round(closing_rate)) / 60;
+            eta_secs = (int)(round(range) / round(closing_rate)) % 60;
+	    snprintf(buffer, sizeof(buffer), "ETA: %i MINS %i SECS", eta_mins, eta_secs);
           }
 	} else {
-		snprintf(buffer, sizeof(buffer), " ");
+		snprintf(buffer, sizeof(buffer), "ETA: ");
 	}
-	sng_abs_xy_draw_string(buffer, TINY_FONT, x + 450, y);
+        y += yinc;
+	sng_abs_xy_draw_string(buffer, TINY_FONT, x, y);
 
 	if (o || waypoint_index != (uint32_t) -1) {
 		snprintf(buffer, sizeof(buffer), "WARP FACTOR: %2.2lf", 10.0 * range / (XKNOWN_DIM / 2.0));
