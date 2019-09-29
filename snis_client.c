@@ -15633,6 +15633,7 @@ static void draw_science_data(GtkWidget *w, struct snis_entity *ship, struct sni
 	int x, y, gx1, gy1, gx2, gy2, yinc;
 	double dx, dy, dz, range;
 	char *the_faction;
+        char *hostility;
 	static double lastx = 0.0;
 	static double lasty = 0.0;
 	static double lastz = 0.0;
@@ -15667,7 +15668,16 @@ static void draw_science_data(GtkWidget *w, struct snis_entity *ship, struct sni
 				o->sdata.faction >= 0 &&
 				o->sdata.faction < nfactions() ?
 					faction_name(o->sdata.faction) : "UNKNOWN" : "UNKNOWN";
-			snprintf(buffer, sizeof(buffer), "ORIG: %s", the_faction);
+                        if (faction_hostility(ship->sdata.faction, o->sdata.faction) > FACTION_HOSTILITY_THRESHOLD) {
+                          hostility = "HOSTILE";
+                        } else {
+                          if (o->sdata.faction == 0) {
+                            hostility = "NEUTRAL";
+                          } else {
+                            hostility = "FRIENDLY";
+                          }
+                        }
+			snprintf(buffer, sizeof(buffer), "ORIG: %s (%s)", the_faction, hostility);
 			sng_abs_xy_draw_string(buffer, TINY_FONT, x, y);
 			y += yinc;
 			if (o->type != OBJTYPE_DERELICT)
