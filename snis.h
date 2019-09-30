@@ -461,12 +461,12 @@ struct ship_data {
 #define SCI_YAW_DAMPING 0.45
 	double sci_heading; /* Angle short range science beam is aiming, radians */
 #define MAX_SCI_BW_YAW_VELOCITY (85 * PI / 180.0)
-#define SCI_BW_YAW_INCREMENT (1 * PI / 180.0)
-#define SCI_BW_YAW_INCREMENT_FINE (0.2 * PI / 180.0)
+#define SCI_BW_YAW_INCREMENT (5 * PI / 180.0)
+#define SCI_BW_YAW_INCREMENT_FINE (1 * PI / 180.0)
 #define SCI_BW_YAW_DAMPING 0.45
 #define MIN_SCI_BEAM_WIDTH (5 * PI / 180.0)
 #define MAX_SCIENCE_SCREEN_RADIUS (XKNOWN_DIM / 3.0)
-#define MIN_SCIENCE_SCREEN_RADIUS (XKNOWN_DIM / 45.0)
+#define MIN_SCIENCE_SCREEN_RADIUS (XKNOWN_DIM / 60.0)
 #define SCIENCE_SHORT_RANGE (0.08 * XKNOWN_DIM)
 	double sci_beam_width;		/* width of short range science beam in radians */
 	double sci_yaw_velocity;	/* radians / tick */
@@ -480,7 +480,7 @@ struct ship_data {
 	uint16_t torpedo_load_time;	/* ticks remaining before torpedo finishes loading */
 	uint8_t phaser_bank_charge;	/* current level of phaser bank charge, 0 - 255 */
 /* These values are for the player ship, RTS units are different see rts_unit_data.h */
-#define FUEL_DURATION (10.0) /* minutes */
+#define FUEL_DURATION (15.0) /* minutes */
 #define FUEL_UNITS (FUEL_DURATION * 60.0 * 30.0)
 #define FUEL_CONSUMPTION_UNIT ((uint32_t) (UINT_MAX / FUEL_UNITS))
 	uint32_t fuel;			/* amount of fuel on the ship.  UINT_MAX == full fuel */
@@ -615,7 +615,7 @@ struct marketplace_data {
 
 #define STARBASE_FIRE_CHANCE 25 /* ... out of 1000, 10x per sec */
 #define STARBASE_SCALE_FACTOR (2.0)
-#define STARBASE_DOCK_TIME (1200) /* 2 minutes */
+#define STARBASE_DOCK_TIME (3000) /* 5 minutes */
 struct starbase_data {
 	uint8_t under_attack;
 	uint8_t lifeform_count;
@@ -1081,7 +1081,7 @@ struct damcon_data {
 #define DAMCONYDIM 2666.666
 
 /* Time after being killed to wait for respawn */
-#define RESPAWN_TIME_SECS 20
+#define RESPAWN_TIME_SECS 30
 
 #define FICTIONAL_CLOCK_START (4273.0)
 #define FICTIONAL_DATE(timestamp) (FICTIONAL_CLOCK_START + (timestamp) / 1000.0)
