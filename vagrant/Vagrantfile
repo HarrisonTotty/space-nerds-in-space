@@ -94,6 +94,10 @@ apt-get install build-essentials portaudio19-dev libvorbis-dev libgtk2.0-dev lib
 # apt-get install libttspico-utils; # for text to speech
 # apt-get install sox; # for "play" command, used by text to speech
 
+# Install graphical interface and Virtual Box guest additions
+apt-get install -y xfce4 xfce4-session
+apt-get install -y xfce4 virtualbox-guest-dkms virtualbox-guest-utils virtualbox-guest-x11
+
 # # Install game
 # apt-get install git make;
 # git clone https://github.com/smcameron/space-nerds-in-space.git /space-nerds;
@@ -103,9 +107,6 @@ git clone https://github.com/HarrisonTotty/space-nerds-in-space.git /space-nerds
 cd /space-nerds; make;
 cd /space-nerds; make update-assets;
 
-# Install graphical interface and Virtual Box guest additions
-apt-get install -y xfce4 xfce4-session
-apt-get install -y xfce4 virtualbox-guest-dkms virtualbox-guest-utils virtualbox-guest-x11
 
 SHELL
 
