@@ -1,3 +1,5 @@
+# TODO: Fix "Failed to find primary IP address"
+
 # TO USE THIS FILE on Windows:
 # 1. Install Oracle VirtualBox (free software)
 # 2. Install Hashicorp Vagrant (free software)
@@ -15,9 +17,9 @@
 # >Password: (whatever you set above)
 
 ## Run the game
-# startxfce4
+# startx
 # Start a Bash Prompt
-# Run "cd /space-nerds/space-nerds-in-space-master/;./snis_launcher"
+# Run "cd /space-nerds;./snis_launcher"
 
 # All Vagrant configuration is done below. The "2" in Vagrant.configure
 # configures the configuration version (we support older styles for
